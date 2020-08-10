@@ -27,7 +27,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
     EditText edit_title;
@@ -38,10 +41,14 @@ public class MainActivity extends AppCompatActivity {
     RecyclerViewAdapter recyclerViewAdapter;
     ArrayList<Movie> movieArrayList = new ArrayList<>();
     RequestQueue requestQueue;
-    String nextPageToken;
-    String pageToken = "";
-    String searchUrl = "";
-
+    // 페이ㅣ징 처리를 위한 변수
+    int offset = 0;
+   int cnt;
+   int limit =  25;
+   // 정렬을 위한 변수
+    String order;
+    String path = "/api/v1/movies/";
+    String title ;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,66 +60,48 @@ public class MainActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerview);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+                int lastPosition = ((LinearLayoutManager) recyclerView.getLayoutManager()).findLastCompletelyVisibleItemPosition();
+                int totalCount = recyclerView.getAdapter().getItemCount();
+                if(lastPosition+1 == totalCount){
+//                    if (cnt >= limit){
+                   // 네트워크 통해서, 데이터를 더 불러오면 된다.
+                    addNetworkData(path);
+//                    }
+                }
+            }
+        });
         requestQueue = Volley.newRequestQueue(MainActivity.this);
+
+        getNetworkData(path);
 
         img_search.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String title = edit_title.getText().toString().trim();
-                if (movieArrayList.size() > 0) {
-                    movieArrayList.clear();
-                    return;
-                }
+                movieArrayList.clear();
+                 title = edit_title.getText().toString().trim();
+
+
                 if (title.isEmpty() == true) {
                     Toast.makeText(MainActivity.this, "검색어를 입력해주세요", Toast.LENGTH_SHORT).show();
                     return;
                 }
+                offset = 0;
+                limit = 25;
+                path = "/api/v1/movies/desc/";
 
-                JSONObject object = new JSONObject();
-                try {
-                    object.put("title", title);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                getNetworkData(path);
 
-
-                JsonObjectRequest request = new JsonObjectRequest(
-                        Request.Method.POST,
-                        Utils.URL + "/api/v1/movies/search/?offset=0",
-                        object,
-                        new Response.Listener<JSONObject>() {
-                            @Override
-                            public void onResponse(JSONObject response) {
-                                try {
-                                    JSONArray movie = response.getJSONArray("movie");
-                                    for (int i = 0; i < movie.length(); i++) {
-                                        JSONObject jsonObject = movie.getJSONObject(i);
-                                        String title = jsonObject.getString("title");
-                                        String genre = jsonObject.getString("genre");
-                                        String attendance = jsonObject.getString("attendance");
-                                        String year = jsonObject.getString("year");
-
-                                        Movie movie1 = new Movie(title, genre, attendance, year);
-                                        movieArrayList.add(movie1);
-                                    }
-                                    recyclerViewAdapter = new RecyclerViewAdapter(
-                                            MainActivity.this, movieArrayList);
-                                    recyclerView.setAdapter(recyclerViewAdapter);
-
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-
-                                }
-                            }
-                        },
-                        new Response.ErrorListener() {
-                            @Override
-                            public void onErrorResponse(VolleyError error) {
-                                Log.i("AAA", error.toString());
-                            }
-                        }
-                );
-                requestQueue.add(request);
             }
 
         });
@@ -120,74 +109,47 @@ public class MainActivity extends AppCompatActivity {
         btn_year_arr.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String title = edit_title.getText().toString().trim();
-                JSONObject object = new JSONObject();
-                try {
-                    object.put("title", title);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-
                 movieArrayList.clear();
-                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
-                        Request.Method.GET,
-                        Utils.URL + "/api/v1/movies/desc/?offset=0&title=" + title,
-                        object,
-                        new Response.Listener<JSONObject>() {
-                            @Override
-                            public void onResponse(JSONObject response) {
-                                try {
-                                    JSONArray movie = response.getJSONArray("movie");
-                                    for (int i = 0; i < movie.length(); i++) {
-                                        JSONObject jsonObject = movie.getJSONObject(i);
-                                        String title = jsonObject.getString("title");
-                                        String genre = jsonObject.getString("genre");
-                                        String attendance = jsonObject.getString("attendance");
-                                        String year = jsonObject.getString("year");
+                title = edit_title.getText().toString().trim();
+                movieArrayList.clear();
+                offset = 0;
+                order = "year";
+                limit = 25;
+                path = "/api/v1/movies/desc/";
 
-                                        Movie movie1 = new Movie(title, genre, attendance, year);
-                                        movieArrayList.add(movie1);
-                                    }
-                                    recyclerViewAdapter = new RecyclerViewAdapter(
-                                            MainActivity.this, movieArrayList);
-                                    recyclerView.setAdapter(recyclerViewAdapter);
+                getNetworkData(path);
 
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-
-                                }
-                            }
-                        },
-                        new Response.ErrorListener() {
-                            @Override
-                            public void onErrorResponse(VolleyError error) {
-
-                            }
-                        }
-                );
-                requestQueue.add(jsonObjectRequest);
             }
         });
 
+
+
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+
+
+    private void getNetworkData(String path) {
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
                 Request.Method.GET,
-                Utils.URL + "/api/v1/movies/?offset=0",
+                Utils.URL + path + "?offset="+offset+"&limit="+limit+"&order="+order+"&title="+edit_title.getText().toString().trim(),
                 null,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
+                        Log.i("AAA",response.toString());
                         try {
+                            boolean success = response.getBoolean("success");
+                            if(success == false){
+                                Toast.makeText(MainActivity.this,"에러에러",Toast.LENGTH_SHORT).show();
+                                return;
+                            }
                             JSONArray movie = response.getJSONArray("movie");
-                            for (int i = 0; i < movie.length(); i++) {
+                            for (int i = 0; i < movie.length(); i++){
                                 JSONObject jsonObject = movie.getJSONObject(i);
+
                                 String title = jsonObject.getString("title");
                                 String genre = jsonObject.getString("genre");
-                                String attendance = jsonObject.getString("attendance");
+                                Integer attendance = jsonObject.getInt("attendance");
                                 String year = jsonObject.getString("year");
 
                                 Movie movie1 = new Movie(title, genre, attendance, year);
@@ -197,19 +159,68 @@ public class MainActivity extends AppCompatActivity {
                                     MainActivity.this, movieArrayList);
                             recyclerView.setAdapter(recyclerViewAdapter);
 
+                            // 페이징을 위해서, 오프셋을 증가시킨다. 그래야 리스트 끝에가서
+                            // 네트워크 다시 호출할때, 해당 offset으로 서버에 요청이 가능하다.
+                      offset = offset+ response.getInt("cnt");
+
+
                         } catch (JSONException e) {
                             e.printStackTrace();
-
                         }
+
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-
+                    Log.i("AAA",error.toString());
                     }
                 }
         );
         requestQueue.add(jsonObjectRequest);
+    }
+
+    private void addNetworkData(String path) {
+      JsonObjectRequest request = new JsonObjectRequest(
+              Request.Method.GET,
+              Utils.URL + path + "?offset="+offset+"&limit="+limit+"&order="+order+"&title="+edit_title.getText().toString().trim(),
+              null,
+              new Response.Listener<JSONObject>() {
+                  @Override
+                  public void onResponse(JSONObject response) {
+                      try {
+                          boolean success = response.getBoolean("success");
+                          if (success==false){
+                              Toast.makeText(MainActivity.this,"에러에러",Toast.LENGTH_SHORT).show();
+                              return;
+                          }   JSONArray movie = response.getJSONArray("movie");
+                          for (int i = 0; i < movie.length(); i++){
+                              JSONObject jsonObject = movie.getJSONObject(i);
+
+                              String title = jsonObject.getString("title");
+                              String genre = jsonObject.getString("genre");
+                              Integer attendance = jsonObject.getInt("attendance");
+                              String year = jsonObject.getString("year");
+
+                              Movie movie1 = new Movie(title, genre, attendance, year);
+                              movieArrayList.add(movie1);
+                          }
+                          recyclerViewAdapter.notifyDataSetChanged();
+
+                          offset = offset+ response.getInt("cnt");
+
+                      } catch (JSONException e) {
+                          e.printStackTrace();
+                      }
+                  }
+              }, new Response.ErrorListener() {
+          @Override
+          public void onErrorResponse(VolleyError error) {
+
+          }
+      }
+
+      );
+        requestQueue.add(request);
     }
 }
