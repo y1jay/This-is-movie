@@ -9,12 +9,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -34,8 +36,12 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
+
+import static android.content.Context.MODE_PRIVATE;
 
 public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>{
 
@@ -64,14 +70,14 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         String genre = movie.getGenre();
         Integer attendance = movie.getAttendance();
         String year = movie.getYear();
-        Integer id = movie.getId();
+
         holder.txtTitle.setText(title);
         holder.txtgenre.setText(genre);
         holder.txtpeople.setText("관객수 : "+attendance);
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         df.setTimeZone(TimeZone.getTimeZone("UTC"));// 위의 시간을 UTC로 맞추는것, 서버에서 이미 맞춰놨으면 안해도 됨
         try {
-            Date date = df.parse(movie.getYear());
+            Date date = df.parse(year);
             df.setTimeZone(TimeZone.getDefault());// 내폰의 로컬 타임존으로 바꾼다.
             String strdate = df.format(date);
             holder.txtyear.setText("개봉 날짜 : "+strdate);
@@ -79,13 +85,16 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             e.printStackTrace();
         }
 
-        holder.btn_star.setImageResource(android.R.drawable.btn_star);
-
+        if (movie.getIs_favorite() == 1) {
+            holder.btn_star.setImageResource(android.R.drawable.btn_star_big_on);
+        }else{
+            holder.btn_star.setImageResource(android.R.drawable.btn_star_big_off);
+        }
     }
 
     @Override
     public int getItemCount() {
-        return movieArrayList .size();
+        return movieArrayList.size();
     }
 
     public  class ViewHolder extends RecyclerView.ViewHolder{
@@ -95,7 +104,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         public TextView txtyear;
         public CardView cardView;
         public ImageView btn_star;
-        RequestQueue requestQueue;
+
 
         public ViewHolder(@NonNull final View itemView) {
             super(itemView);
@@ -105,8 +114,39 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             txtyear = itemView.findViewById(R.id.txtyear);
             cardView = itemView.findViewById(R.id.cardView);
             btn_star = itemView.findViewById(R.id.btn_star);
-            requestQueue = Volley.newRequestQueue(context);
 
+
+
+            btn_star.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    int position = getAdapterPosition();
+                    SharedPreferences sp = context.getSharedPreferences(Utils.PREFERENCES_NAME,
+                            MODE_PRIVATE);
+                    final String token = sp.getString("token",null);
+                    if (token == null){
+                        Toast.makeText(context,"로그인이 필요합니다",Toast.LENGTH_SHORT).show();
+                    }else{
+                        // 정상적으로 별표 표시를 서버로 보냅니다.
+                        // 즐겨찾기 구차가는 API를 호출한건데,
+                        // 호출하는 코드는 메인엑티비티에 메소드로 만들고,
+                        // 여기에서는 position 값만 넘겨주도록 한다.
+
+                        // 별표가 이미 있으면, 즐겨찾기 삭제 함수 호출!
+
+                        // 별표가 없으면, 즐겨찾기 추가 함수 호출!
+                        int is_favorite = movieArrayList.get(position).getIs_favorite();
+                        if (is_favorite==1) {
+                            // 별표 색이 이미 있으면, 즐겨찾기 삭제함수 호출
+                            ((MainActivity)context).delFavorite(position);
+                        }else{
+                            // 별표 색이 없으면, 즐겨찾기 추가 함수 호출
+                            ((MainActivity)context).addFavorite(position);
+                        }
+                    }
+
+                }
+            });
         }
     }
 }

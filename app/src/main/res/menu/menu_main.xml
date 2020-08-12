@@ -1,0 +1,21 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.yijun.customalert.MainActivity">
+    <item
+        android:id="@+id/menu_signup"
+        android:icon="@android:drawable/ic_input_add"
+        android:orderInCategory="1"
+        android:title="회원가입"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_login"
+        android:icon="@android:drawable/ic_media_play"
+        android:orderInCategory="1"
+        android:title="로그인"
+        app:showAsAction="ifRoom" />
+
+
+
+</menu>

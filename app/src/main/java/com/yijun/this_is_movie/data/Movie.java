@@ -9,6 +9,16 @@ public class Movie implements Serializable {
     Integer attendance;
     String year;
     Integer cnt;
+    Integer is_favorite;
+
+    public Movie(Integer id, String title, String genre, Integer attendance, String year, Integer is_favorite) {
+        this.id = id;
+        this.title = title;
+        this.genre = genre;
+        this.attendance = attendance;
+        this.year = year;
+        this.is_favorite = is_favorite;
+    }
 
     public Integer getId() {
         return id;
@@ -16,14 +26,6 @@ public class Movie implements Serializable {
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public Integer getCnt() {
-        return cnt;
-    }
-
-    public void setCnt(Integer cnt) {
-        this.cnt = cnt;
     }
 
     public String getTitle() {
@@ -58,20 +60,33 @@ public class Movie implements Serializable {
         this.year = year;
     }
 
-    public Movie(String title, String genre, Integer attendance, String year) {
-        this.title = title;
-        this.genre = genre;
-        this.attendance = attendance;
-        this.year = year;
+    public Integer getCnt() {
+        return cnt;
     }
 
-    public Movie(Integer id, String title, String genre, Integer attendance, String year, Integer cnt) {
+    public void setCnt(Integer cnt) {
+        this.cnt = cnt;
+    }
+
+    public Integer getIs_favorite() {
+        return is_favorite;
+    }
+
+    public void setIs_favorite(Integer is_favorite) {
+        this.is_favorite = is_favorite;
+    }
+
+    public Movie(Integer id, Integer cnt) {
         this.id = id;
+        this.cnt = cnt;
+    }
+
+    public Movie(String title, String genre, Integer attendance, String year, Integer is_favorite) {
         this.title = title;
         this.genre = genre;
         this.attendance = attendance;
         this.year = year;
-        this.cnt = cnt;
+        this.is_favorite = is_favorite;
     }
 
     public Movie() {
